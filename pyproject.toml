@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aivectormemory"
+version = "0.1.5"
+description = "轻量级 MCP Server，为 AI 编程助手提供跨会话持久记忆能力"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "AIVectorMemory Contributors" }]
+keywords = ["mcp", "memory", "ai", "llm", "sqlite", "embedding"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "sqlite-vec>=0.1.0",
+    "onnxruntime>=1.16",
+    "tokenizers>=0.15",
+    "huggingface-hub>=0.20",
+    "numpy>=1.24",
+]
+
+[project.scripts]
+run = "aivectormemory.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/Edlineas/aivectormemory"
+Repository = "https://github.com/Edlineas/aivectormemory"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aivectormemory"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

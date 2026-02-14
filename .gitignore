@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+.venv/
+
+# AIVectorMemory data
+.aivectormemory/
+
+# IDE
+.vscode/
+.idea/
+.claude/
+.kiro/
+.shared/
+.mcp.json
+CLAUDE.md
+CLAUDE.md.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+.pytest_cache/
+htmlcov/
+.coverage
+tests/
+
+# Screenshots (Playwright)
+tests/screenshots/
