@@ -10,7 +10,7 @@ def read_message() -> dict | None:
 
 
 def write_message(msg: dict):
-    sys.stdout.write(json.dumps(msg) + "\n")
+    sys.stdout.write(json.dumps(msg, ensure_ascii=False) + "\n")
     sys.stdout.flush()
 
 
