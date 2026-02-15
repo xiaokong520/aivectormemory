@@ -16,17 +16,14 @@ const api = (path, opts = {}) => {
 const PAGE_SIZE = 50;
 const state = { projectPage: 1, userPage: 1 };
 
-const i18n = {
-  status: { pending: '待处理', in_progress: '进行中', completed: '已完成', archived: '已归档' },
-};
+const i18n = { get status() { return t('status') || {}; } };
 
-function parseTags(t) {
-  try { return typeof t === 'string' ? JSON.parse(t) : (t || []); } catch { return []; }
+function parseTags(v) {
+  try { return typeof v === 'string' ? JSON.parse(v) : (v || []); } catch { return []; }
 }
 function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+function debounce(fn, ms) { let timer; return (...a) => { clearTimeout(timer); timer = setTimeout(() => fn(...a), ms); }; }
 
-// Tab 切换
 function switchTab(tab) {
   $$('.nav-item').forEach(i => i.classList.remove('active'));
   $$('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -41,7 +38,6 @@ $$('.nav-item').forEach(item => {
   item.addEventListener('click', () => switchTab(item.dataset.tab));
 });
 
-// Modal
 function showModal(title, html, onSave) {
   $('#modal-title').textContent = title;
   $('#modal-content').innerHTML = html;
@@ -53,13 +49,12 @@ function hideModal() { $('#modal').classList.add('hidden'); }
 $$('.modal-close').forEach(b => b.addEventListener('click', hideModal));
 $('.modal-overlay').addEventListener('click', hideModal);
 
-// 渲染 issue 卡片（公共函数）
 function renderIssueCard(i) {
   const badgeMap = { pending: 'warning', in_progress: 'info', completed: 'success' };
   const isArchived = !!i.archived_at;
   const badge = isArchived ? 'muted' : (badgeMap[i.status] || 'muted');
   const label = i18n.status[isArchived ? 'archived' : i.status] || i.status;
-  const meta = isArchived ? `${i.date} · 归档于 ${i.archived_at}` : `${i.date} · 创建于 ${i.created_at}`;
+  const meta = isArchived ? `${i.date} · ${t('archivedAt')} ${i.archived_at}` : `${i.date} · ${t('createdAt')} ${i.created_at}`;
   return `
   <div class="issue-card" onclick="this.classList.toggle('expanded')">
     <div class="issue-card__header">
@@ -68,30 +63,32 @@ function renderIssueCard(i) {
     </div>
     ${i.content ? `<div class="issue-card__content">${escHtml(i.content)}</div>` : ''}
     <div class="issue-card__meta">${meta}</div>
-    ${i.content ? '<div class="issue-card__expand">点击展开详情</div>' : ''}
+    ${i.content ? `<div class="issue-card__expand">${t('clickExpand')}</div>` : ''}
   </div>`;
 }
 
-// 渲染记忆卡片（BEM: memory-card）
 function renderMemoryCard(m) {
   const tags = parseTags(m.tags);
   return `<div class="memory-card">
     <div class="memory-card__header">
       <div class="memory-card__id">${m.id}</div>
       <div class="memory-card__actions">
-        <button class="btn btn--ghost btn--sm" onclick="event.stopPropagation();editMemory('${m.id}')">编辑</button>
-        <button class="btn btn--ghost-danger btn--sm" onclick="event.stopPropagation();deleteMemory('${m.id}')">删除</button>
+        <button class="btn btn--ghost btn--sm" onclick="event.stopPropagation();editMemory('${m.id}')">${t('edit')}</button>
+        <button class="btn btn--ghost-danger btn--sm" onclick="event.stopPropagation();deleteMemory('${m.id}')">${t('delete')}</button>
       </div>
     </div>
     <div class="memory-card__content" onclick="this.classList.toggle('expanded')">${escHtml(m.content)}</div>
     <div class="memory-card__footer">
-      <div class="memory-card__tags">${tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}</div>
+      <div class="memory-card__tags">${tags.map(tg => `<span class="tag">${escHtml(tg)}</span>`).join('')}</div>
       <div class="memory-card__time">${m.created_at || ''}</div>
     </div>
   </div>`;
 }
 
-// 分页渲染（BEM: pager）
+function pagerInfo(total, page, pages) {
+  return `${t('total')} ${total} ${t('items')}，${page}/${pages} ${t('page')}`;
+}
+
 function renderPager(containerId, page, total, onPage) {
   const pages = Math.ceil(total / PAGE_SIZE) || 1;
   if (pages <= 1) { $(containerId).innerHTML = ''; return; }
@@ -99,13 +96,12 @@ function renderPager(containerId, page, total, onPage) {
   for (let i = 1; i <= pages; i++) {
     btns += `<button class="pager__btn${i === page ? ' pager__btn--active' : ''}" data-page="${i}">${i}</button>`;
   }
-  $(containerId).innerHTML = `<span class="pager__info">共 ${total} 条，第 ${page}/${pages} 页</span>${btns}`;
+  $(containerId).innerHTML = `<span class="pager__info">${pagerInfo(total, page, pages)}</span>${btns}`;
   $(containerId).querySelectorAll('.pager__btn').forEach(btn => {
     btn.addEventListener('click', () => onPage(parseInt(btn.dataset.page)));
   });
 }
 
-// 加载记忆（通用）
 async function loadMemoriesByScope(scope, listId, pagerId, searchId, countId, pageKey) {
   const query = $(searchId).value;
   const page = state[pageKey];
@@ -115,10 +111,10 @@ async function loadMemoriesByScope(scope, listId, pagerId, searchId, countId, pa
   const memories = data.memories || [];
   const total = data.total || memories.length;
 
-  $(countId).textContent = `共 ${total} 条`;
+  $(countId).textContent = `${t('total')} ${total} ${t('items')}`;
   $(listId).innerHTML = memories.length
     ? memories.map(renderMemoryCard).join('')
-    : '<div class="empty-state">暂无记忆</div>';
+    : `<div class="empty-state">${t('noMemories')}</div>`;
 
   renderPager(pagerId, page, total, p => { state[pageKey] = p; loadMemoriesByScope(scope, listId, pagerId, searchId, countId, pageKey); });
 }
@@ -130,18 +126,17 @@ function loadUserMemories() {
   loadMemoriesByScope('user', '#user-memory-list', '#user-pager', '#user-search', '#user-count', 'userPage');
 }
 
-// 编辑记忆
 window.editMemory = async (id) => {
   const m = await api(`memories/${id}`);
   const tags = parseTags(m.tags);
-  showModal('编辑记忆', `
-    <div class="form-field"><label class="form-label">内容</label>
+  showModal(t('editMemory'), `
+    <div class="form-field"><label class="form-label">${t('content')}</label>
       <textarea class="form-textarea" id="edit-content">${escHtml(m.content)}</textarea></div>
-    <div class="form-field"><label class="form-label">标签（逗号分隔）</label>
+    <div class="form-field"><label class="form-label">${t('tagsCommaSep')}</label>
       <input class="form-input" id="edit-tags" value="${tags.join(', ')}"></div>
   `, async () => {
     const content = $('#edit-content').value;
-    const newTags = $('#edit-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+    const newTags = $('#edit-tags').value.split(',').map(s => s.trim()).filter(Boolean);
     await api(`memories/${id}`, { method: 'PUT', body: { content, tags: newTags } });
     hideModal();
     loadProjectMemories();
@@ -149,9 +144,8 @@ window.editMemory = async (id) => {
   });
 };
 
-// 删除记忆
 window.deleteMemory = async (id) => {
-  if (!confirm('确认删除？')) return;
+  if (!confirm(t('confirmDelete'))) return;
   await api(`memories/${id}`, { method: 'DELETE' });
   loadProjectMemories();
   loadUserMemories();
@@ -166,7 +160,6 @@ function bindSearchClear(inputId, clearId, pageKey, loadFn) {
 bindSearchClear('#project-search', '#project-search-clear', 'projectPage', loadProjectMemories);
 bindSearchClear('#user-search', '#user-search-clear', 'userPage', loadUserMemories);
 
-// 弹窗展示记忆列表
 const MODAL_PAGE_SIZE = 10;
 
 async function showMemoryModal(title, scope, query, page = 1, tag = null) {
@@ -181,7 +174,7 @@ async function showMemoryModal(title, scope, query, page = 1, tag = null) {
 
   const list = memories.length
     ? memories.map(renderMemoryCard).join('')
-    : '<div class="empty-state">暂无记忆</div>';
+    : `<div class="empty-state">${t('noMemories')}</div>`;
 
   let pagerHtml = '';
   if (pages > 1) {
@@ -189,7 +182,7 @@ async function showMemoryModal(title, scope, query, page = 1, tag = null) {
     for (let i = 1; i <= pages; i++) {
       btns += `<button class="pager__btn${i === page ? ' pager__btn--active' : ''}" data-page="${i}">${i}</button>`;
     }
-    pagerHtml = `<div class="pager"><span class="pager__info">共 ${total} 条，第 ${page}/${pages} 页</span>${btns}</div>`;
+    pagerHtml = `<div class="pager"><span class="pager__info">${pagerInfo(total, page, pages)}</span>${btns}</div>`;
   }
 
   showModal(title, `<div class="modal-list">${list}</div>${pagerHtml}`);
@@ -207,7 +200,7 @@ async function showIssueModal(title, status, page = 1) {
   const start = (page - 1) * MODAL_PAGE_SIZE;
   const slice = issues.slice(start, start + MODAL_PAGE_SIZE);
 
-  const list = slice.length ? slice.map(i => renderIssueCard(i)).join('') : '<div class="empty-state">暂无问题</div>';
+  const list = slice.length ? slice.map(i => renderIssueCard(i)).join('') : `<div class="empty-state">${t('noIssues')}</div>`;
 
   let pagerHtml = '';
   if (pages > 1) {
@@ -215,7 +208,7 @@ async function showIssueModal(title, status, page = 1) {
     for (let i = 1; i <= pages; i++) {
       btns += `<button class="pager__btn${i === page ? ' pager__btn--active' : ''}" data-page="${i}">${i}</button>`;
     }
-    pagerHtml = `<div class="pager"><span class="pager__info">共 ${total} 条，第 ${page}/${pages} 页</span>${btns}</div>`;
+    pagerHtml = `<div class="pager"><span class="pager__info">${pagerInfo(total, page, pages)}</span>${btns}</div>`;
   }
 
   showModal(title, `<div class="modal-list">${list}</div>${pagerHtml}`);
@@ -224,7 +217,6 @@ async function showIssueModal(title, status, page = 1) {
   });
 }
 
-// 统计概览
 async function loadStats() {
   const s = await api('stats');
   const mem = s.memories || {};
@@ -233,8 +225,8 @@ async function loadStats() {
   const tagList = Object.entries(tags).sort((a, b) => b[1] - a[1]);
 
   const cards = [
-    { label: '项目记忆', num: mem.project || 0, cls: 'blue', action: 'goto-tab', tab: 'project-memories' },
-    { label: '用户记忆', num: mem.user || 0, cls: 'cyan', action: 'goto-tab', tab: 'user-memories' },
+    { label: t('projectMemories'), num: mem.project || 0, cls: 'blue', action: 'goto-tab', tab: 'project-memories' },
+    { label: t('globalMemories'), num: mem.user || 0, cls: 'cyan', action: 'goto-tab', tab: 'user-memories' },
     { label: i18n.status.pending, num: issues.pending || 0, cls: 'warning', action: 'filter-issues', status: 'pending' },
     { label: i18n.status.in_progress, num: issues.in_progress || 0, cls: 'info', action: 'filter-issues', status: 'in_progress' },
     { label: i18n.status.completed, num: issues.completed || 0, cls: 'success', action: 'filter-issues', status: 'completed' },
@@ -255,17 +247,16 @@ async function loadStats() {
       const action = card.dataset.action;
       if (action === 'filter-issues') {
         const labelMap = i18n.status;
-        showIssueModal(labelMap[card.dataset.status] || '问题列表', card.dataset.status);
+        showIssueModal(labelMap[card.dataset.status] || t('issueList'), card.dataset.status);
       } else if (action === 'goto-tab') {
         const tab = card.dataset.tab;
         const scope = tab === 'user-memories' ? 'user' : 'project';
-        showMemoryModal(scope === 'user' ? '用户记忆' : '项目记忆', scope, '');
+        showMemoryModal(scope === 'user' ? t('globalMemories') : t('projectMemories'), scope, '');
       }
     });
   });
 }
 
-// 向量记忆网络可视化
 function renderVectorNetwork(tagList) {
   const MAX_NODES = 100, FL = 600;
   const items = tagList.slice(0, MAX_NODES);
@@ -279,8 +270,8 @@ function renderVectorNetwork(tagList) {
   const colors = ['#3B82F6','#2563EB','#60A5FA','#818CF8','#A78BFA','#34D399','#F59E0B','#EF4444','#EC4899','#14B8A6','#8B5CF6','#F97316','#06B6D4','#84CC16','#E879F9'];
 
   const nodes3d = items.map(([label, count], i) => {
-    const t = maxC === minC ? 0.5 : (count - minC) / (maxC - minC);
-    const baseR = 4 + t * (nodeCount > 30 ? 8 : 14);
+    const ratio = maxC === minC ? 0.5 : (count - minC) / (maxC - minC);
+    const baseR = 4 + ratio * (nodeCount > 30 ? 8 : 14);
     const phi = Math.acos(1 - 2 * (i + 0.5) / nodeCount);
     const theta = Math.PI * (1 + Math.sqrt(5)) * i;
     return { label, count, baseR, x: R * Math.sin(phi) * Math.cos(theta), y: R * Math.cos(phi), z: R * Math.sin(phi) * Math.sin(theta), px: 0, py: 0, pz: 0 };
@@ -293,13 +284,14 @@ function renderVectorNetwork(tagList) {
   }
   if (nodes3d.length > 2) edges.push([nodes3d.length - 1, 0]);
 
-  const moreLink = tagList.length > 0 ? `<a class="vector-network__more" id="vn-show-all">查看更多</a>` : '';
+  const vectorSub = t('vectorSub').replace('{n}', nodeCount);
+  const moreLink = tagList.length > 0 ? `<a class="vector-network__more" id="vn-show-all">${t('showMore')}</a>` : '';
   container.innerHTML = `
     <div class="vector-network">
       <div class="vector-network__header">
         <div class="vector-network__left">
-          <span class="vector-network__label">记忆向量网络</span>
-          <span class="vector-network__sub">语义关联 · 3D 拓扑 · 鼠标旋转 · ${nodeCount} 节点</span>
+          <span class="vector-network__label">${t('vectorNetwork')}</span>
+          <span class="vector-network__sub">${vectorSub}</span>
         </div>
         ${moreLink}
       </div>
@@ -315,10 +307,10 @@ function renderVectorNetwork(tagList) {
     showAllBtn.addEventListener('click', () => {
       const html = tagList.length ? `<ul class="stat-list stat-list--tags">${tagList.map(([k, v]) =>
         `<li><a class="stat-link" data-tag="${escHtml(k)}" style="cursor:pointer"><span>${escHtml(k)}</span><span class="tag-count">${v}</span></a></li>`
-      ).join('')}</ul>` : '<div class="empty-state">暂无标签</div>';
-      showModal(`全部标签（${tagList.length}）`, html);
-      $$('#modal-content .stat-link').forEach(t => {
-        t.addEventListener('click', () => { hideModal(); showMemoryModal(`标签：${t.dataset.tag}`, 'all', '', 1, t.dataset.tag); });
+      ).join('')}</ul>` : `<div class="empty-state">${t('noTags')}</div>`;
+      showModal(t('allTags').replace('{n}', tagList.length), html);
+      $$('#modal-content .stat-link').forEach(link => {
+        link.addEventListener('click', () => { hideModal(); showMemoryModal(t('tagLabel').replace('{name}', link.dataset.tag), 'all', '', 1, link.dataset.tag); });
       });
     });
   }
@@ -409,7 +401,7 @@ function renderVectorNetwork(tagList) {
       const g = el && el.closest('.vg-node');
       if (g) {
         const idx = nodeEls.findIndex(n => n.g === g);
-        if (idx >= 0) showMemoryModal(`标签：${nodeEls[idx].label}`, 'all', '', 1, nodeEls[idx].label);
+        if (idx >= 0) showMemoryModal(t('tagLabel').replace('{name}', nodeEls[idx].label), 'all', '', 1, nodeEls[idx].label);
       }
     }
   });
@@ -423,26 +415,25 @@ function renderVectorNetwork(tagList) {
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-// 会话状态（BEM: status-grid, status-section）
 async function loadStatus() {
   const s = await api('status');
-  if (s.empty) { $('#status-content').innerHTML = '<div class="empty-state">暂无会话状态</div>'; return; }
+  if (s.empty) { $('#status-content').innerHTML = `<div class="empty-state">${t('noStatus')}</div>`; return; }
 
   const isBlocked = s.is_blocked;
   const dotClass = isBlocked ? 'status-dot--blocked' : 'status-dot--ok';
-  const blockText = isBlocked ? `是 - ${escHtml(s.block_reason || '')}` : '无';
+  const blockText = isBlocked ? `${t('yes')} - ${escHtml(s.block_reason || '')}` : t('no');
 
   const gridItems = [
-    ['阻塞状态', `<span class="status-dot ${dotClass}"></span>${blockText}`, 'status-item--alert'],
-    ['当前任务', escHtml(s.current_task || '-')],
-    ['下一步', escHtml(s.next_step || '-')],
-    ['更新时间', s.updated_at || '-'],
+    [t('blocked'), `<span class="status-dot ${dotClass}"></span>${blockText}`, 'status-item--alert'],
+    [t('currentTask'), escHtml(s.current_task || '-')],
+    [t('nextStep'), escHtml(s.next_step || '-')],
+    [t('updateTime'), s.updated_at || '-'],
   ];
 
   const sections = [
-    ['进度', s.progress],
-    ['最近修改', s.recent_changes],
-    ['待处理', s.pending],
+    [t('progress'), s.progress],
+    [t('recentChanges'), s.recent_changes],
+    [t('pending'), s.pending],
   ].filter(([, arr]) => arr && arr.length);
 
   $('#status-content').innerHTML = `
@@ -465,7 +456,6 @@ async function loadStatus() {
   `;
 }
 
-// 问题跟踪（BEM: issue-card）
 async function loadIssues() {
   const date = $('#issue-date').value;
   const status = $('#issue-status-filter').value;
@@ -476,14 +466,13 @@ async function loadIssues() {
   const data = await api(url);
   const issues = data.issues || [];
 
-  $('#issue-list').innerHTML = issues.length ? issues.map(i => renderIssueCard(i)).join('') : '<div class="empty-state">暂无问题</div>';
+  $('#issue-list').innerHTML = issues.length ? issues.map(i => renderIssueCard(i)).join('') : `<div class="empty-state">${t('noIssues')}</div>`;
 }
 
 $('#issue-date').value = new Date().toISOString().slice(0, 10);
 $('#issue-date').addEventListener('change', loadIssues);
 $('#issue-status-filter').addEventListener('change', loadIssues);
 
-// 标签管理
 let tagData = [], tagSelected = new Set();
 
 async function loadTags() {
@@ -493,23 +482,23 @@ async function loadTags() {
   tagData = data.tags || [];
   tagSelected.clear();
   updateTagBatchBar();
-  $('#tag-total-count').textContent = `共 ${data.total || tagData.length} 个标签`;
+  $('#tag-total-count').textContent = `${t('total')} ${data.total || tagData.length} ${t('tagsUnit')}`;
   $('#tag-select-all').checked = false;
   renderTagTable();
 }
 
 function renderTagTable() {
   const tbody = $('#tag-table-body');
-  if (!tagData.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">暂无标签</div></td></tr>'; return; }
-  tbody.innerHTML = tagData.map(t => `
-    <tr data-tag="${escHtml(t.name)}">
-      <td><input type="checkbox" class="tag-cell__check" ${tagSelected.has(t.name) ? 'checked' : ''}></td>
-      <td><span class="tag-cell__name">${escHtml(t.name)}</span></td>
-      <td><span class="tag-count">${t.count}</span></td>
+  if (!tagData.length) { tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">${t('noTags')}</div></td></tr>`; return; }
+  tbody.innerHTML = tagData.map(tg => `
+    <tr data-tag="${escHtml(tg.name)}">
+      <td><input type="checkbox" class="tag-cell__check" ${tagSelected.has(tg.name) ? 'checked' : ''}></td>
+      <td><span class="tag-cell__name">${escHtml(tg.name)}</span></td>
+      <td><span class="tag-count">${tg.count}</span></td>
       <td class="tag-actions">
-        <button class="btn btn--ghost btn--sm tag-rename">重命名</button>
-        <button class="btn btn--ghost btn--sm tag-view" style="color:#60A5FA">查看</button>
-        <button class="btn btn--ghost btn--sm tag-delete" style="color:#F87171">删除</button>
+        <button class="btn btn--ghost btn--sm tag-rename">${t('rename')}</button>
+        <button class="btn btn--ghost btn--sm tag-view" style="color:#60A5FA">${t('view')}</button>
+        <button class="btn btn--ghost btn--sm tag-delete" style="color:#F87171">${t('delete')}</button>
       </td>
     </tr>`).join('');
 
@@ -524,7 +513,7 @@ function renderTagTable() {
     btn.addEventListener('click', () => renameTagAction(btn.closest('tr').dataset.tag));
   });
   tbody.querySelectorAll('.tag-view').forEach(btn => {
-    btn.addEventListener('click', () => showMemoryModal(`标签：${btn.closest('tr').dataset.tag}`, 'all', '', 1, btn.closest('tr').dataset.tag));
+    btn.addEventListener('click', () => showMemoryModal(t('tagLabel').replace('{name}', btn.closest('tr').dataset.tag), 'all', '', 1, btn.closest('tr').dataset.tag));
   });
   tbody.querySelectorAll('.tag-delete').forEach(btn => {
     btn.addEventListener('click', () => deleteTagAction([btn.closest('tr').dataset.tag]));
@@ -542,10 +531,10 @@ function updateTagBatchBar() {
 }
 
 function renameTagAction(oldName) {
-  showModal('重命名标签', `
-    <div class="form-field"><label class="form-label">当前名称</label>
+  showModal(t('renameTag'), `
+    <div class="form-field"><label class="form-label">${t('currentName')}</label>
       <input class="form-input" value="${escHtml(oldName)}" disabled></div>
-    <div class="form-field"><label class="form-label">新名称</label>
+    <div class="form-field"><label class="form-label">${t('newName')}</label>
       <input class="form-input" id="rename-new-name" value="${escHtml(oldName)}"></div>
   `, async () => {
     const newName = $('#rename-new-name').value.trim();
@@ -558,13 +547,13 @@ function renameTagAction(oldName) {
 }
 
 async function deleteTagAction(names) {
-  if (!confirm(`确认删除标签：${names.join(', ')}？\n标签将从所有关联记忆中移除。`)) return;
+  if (!confirm(t('confirmDeleteTag').replace('{names}', names.join(', ')))) return;
   await api('tags/delete', { method: 'DELETE', body: { tags: names } });
   loadTags();
 }
 
 $('#tag-select-all')?.addEventListener('change', (e) => {
-  tagSelected = e.target.checked ? new Set(tagData.map(t => t.name)) : new Set();
+  tagSelected = e.target.checked ? new Set(tagData.map(tg => tg.name)) : new Set();
   renderTagTable();
   updateTagBatchBar();
 });
@@ -572,10 +561,10 @@ $('#tag-select-all')?.addEventListener('change', (e) => {
 $('#tag-batch-merge')?.addEventListener('click', () => {
   if (tagSelected.size < 2) return;
   const names = [...tagSelected];
-  showModal('合并标签', `
-    <div class="form-field"><label class="form-label">将以下标签合并</label>
+  showModal(t('mergeTags'), `
+    <div class="form-field"><label class="form-label">${t('mergeFollowing')}</label>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${names.map(n => `<span class="tag">${escHtml(n)}</span>`).join('')}</div></div>
-    <div class="form-field"><label class="form-label">合并为</label>
+    <div class="form-field"><label class="form-label">${t('mergeInto')}</label>
       <input class="form-input" id="merge-target" value="${escHtml(names[0])}"></div>
   `, async () => {
     const target = $('#merge-target').value.trim();
@@ -621,7 +610,15 @@ function loadTab(tab) {
   })[tab]?.();
 }
 
-// === 项目选择 ===
+window._reloadCurrentView = () => {
+  if (currentProject) {
+    const active = $('.nav-item.active');
+    if (active) loadTab(active.dataset.tab);
+  } else {
+    loadProjects();
+  }
+};
+
 const folderIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
 
 function loadProjects() {
@@ -633,13 +630,13 @@ function loadProjects() {
         <div class="project-card__name">${escHtml(p.name)}</div>
         <div class="project-card__path">${escHtml(p.project_dir)}</div>
         <div class="project-card__stats">
-          <div class="project-card__stat"><div class="project-card__stat-num project-card__stat-num--blue">${p.memories}</div><div class="project-card__stat-label">记忆</div></div>
-          <div class="project-card__stat"><div class="project-card__stat-num project-card__stat-num--amber">${p.issues}</div><div class="project-card__stat-label">问题</div></div>
-          <div class="project-card__stat"><div class="project-card__stat-num project-card__stat-num--cyan">${p.tags}</div><div class="project-card__stat-label">标签</div></div>
+          <div class="project-card__stat"><div class="project-card__stat-num project-card__stat-num--blue">${p.memories}</div><div class="project-card__stat-label">${t('memories')}</div></div>
+          <div class="project-card__stat"><div class="project-card__stat-num project-card__stat-num--amber">${p.issues}</div><div class="project-card__stat-label">${t('issues')}</div></div>
+          <div class="project-card__stat"><div class="project-card__stat-num project-card__stat-num--cyan">${p.tags}</div><div class="project-card__stat-label">${t('tags')}</div></div>
         </div>
       </div>
     `).join('');
-    $('#project-select-footer').textContent = `~/.aivectormemory/memory.db · ${data.projects.length} 个项目`;
+    $('#project-select-footer').innerHTML = `${t('footer').replace('{n}', data.projects.length)} · <a href="https://github.com/Edlineas/aivectormemory" target="_blank" rel="noopener" style="color:#6366F1;text-decoration:none">GitHub</a>`;
     grid.querySelectorAll('.project-card').forEach(card => {
       card.addEventListener('click', () => enterProject(card.dataset.project));
     });
@@ -657,6 +654,7 @@ function enterProject(projectDir) {
   $$('.nav-item').forEach((el, i) => el.classList.toggle('active', i === 0));
   $$('.tab-panel').forEach(el => el.classList.remove('active'));
   $('#tab-stats').classList.add('active');
+  renderLangSwitcher('lang-switcher-sidebar');
   loadStats();
 }
 
@@ -671,6 +669,9 @@ function exitProject() {
 
 $('#sidebar-project-info')?.addEventListener('click', exitProject);
 
-// 初始加载：从 hash 恢复项目或显示项目选择页
+// 初始化
+setLang(currentLang);
+renderLangSwitcher('lang-switcher-project');
+
 const _hashProject = location.hash ? decodeURIComponent(location.hash.slice(1)) : '';
 _hashProject ? enterProject(_hashProject) : loadProjects();

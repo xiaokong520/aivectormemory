@@ -24,8 +24,9 @@
       </svg>
       <span>AIVectorMemory</span>
     </div>
-    <div class="project-select__title">选择项目</div>
+    <div class="project-select__title" data-i18n="selectProject">选择项目</div>
   </div>
+  <div id="lang-switcher-project" class="lang-switcher lang-switcher--topright"></div>
   <div id="project-grid" class="project-grid"></div>
   <div id="project-select-footer" class="project-select__footer"></div>
 </div>
@@ -53,27 +54,27 @@
     <ul class="nav-list">
       <li class="nav-item active" data-tab="stats">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        统计概览
+        <span data-i18n="stats">统计概览</span>
       </li>
       <li class="nav-item" data-tab="project-memories">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        项目记忆
+        <span data-i18n="projectMemories">项目记忆</span>
       </li>
       <li class="nav-item" data-tab="user-memories">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        用户记忆
+        <span data-i18n="globalMemories">全局记忆</span>
       </li>
       <li class="nav-item" data-tab="status">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        会话状态
+        <span data-i18n="sessionStatus">会话状态</span>
       </li>
       <li class="nav-item" data-tab="tags">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-        标签管理
+        <span data-i18n="tagManagement">标签管理</span>
       </li>
       <li class="nav-item" data-tab="issues">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        问题跟踪
+        <span data-i18n="issueTracking">问题跟踪</span>
       </li>
     </ul>
     <div class="sidebar-decor">
@@ -93,20 +94,21 @@
     </div>
   </nav>
   <main class="content">
+    <div id="lang-switcher-sidebar" class="lang-switcher lang-switcher--topright"></div>
     <section id="tab-stats" class="tab-panel active">
-      <div class="page-header"><h2 class="page-title">统计概览</h2></div>
+      <div class="page-header"><h2 class="page-title" data-i18n="stats">统计概览</h2></div>
       <div id="stats-content" class="stats-grid"></div>
       <div id="vector-network-container"></div>
     </section>
     <section id="tab-project-memories" class="tab-panel">
       <div class="page-header">
-        <h2 class="page-title">项目记忆</h2>
+        <h2 class="page-title" data-i18n="projectMemories">项目记忆</h2>
         <span id="project-count" class="page-count"></span>
       </div>
       <div class="toolbar">
         <div class="search-box">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="project-search" placeholder="搜索项目记忆..." class="search-input">
+          <input type="text" id="project-search" placeholder="搜索项目记忆..." data-i18n-placeholder="searchProject" class="search-input">
           <button class="search-clear hidden" id="project-search-clear">&times;</button>
         </div>
       </div>
@@ -115,13 +117,13 @@
     </section>
     <section id="tab-user-memories" class="tab-panel">
       <div class="page-header">
-        <h2 class="page-title">用户记忆</h2>
+        <h2 class="page-title" data-i18n="globalMemories">全局记忆</h2>
         <span id="user-count" class="page-count"></span>
       </div>
       <div class="toolbar">
         <div class="search-box">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="user-search" placeholder="搜索用户记忆..." class="search-input">
+          <input type="text" id="user-search" placeholder="搜索全局记忆..." data-i18n-placeholder="searchGlobal" class="search-input">
           <button class="search-clear hidden" id="user-search-clear">&times;</button>
         </div>
       </div>
@@ -129,49 +131,49 @@
       <div id="user-pager" class="pager"></div>
     </section>
     <section id="tab-status" class="tab-panel">
-      <div class="page-header"><h2 class="page-title">会话状态</h2></div>
+      <div class="page-header"><h2 class="page-title" data-i18n="sessionStatus">会话状态</h2></div>
       <div id="status-content" class="status-panel"></div>
     </section>
     <section id="tab-tags" class="tab-panel">
       <div class="page-header">
-        <h2 class="page-title">标签管理</h2>
+        <h2 class="page-title" data-i18n="tagManagement">标签管理</h2>
         <span id="tag-total-count" class="page-count"></span>
       </div>
       <div class="toolbar">
         <div class="search-box">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="tag-search" placeholder="搜索标签..." class="search-input">
+          <input type="text" id="tag-search" placeholder="搜索标签..." data-i18n-placeholder="searchTag" class="search-input">
           <button class="search-clear hidden" id="tag-search-clear">&times;</button>
         </div>
       </div>
       <div id="tag-batch-bar" class="batch-bar" style="display:none">
-        <span class="batch-bar__info">已选 <strong id="tag-selected-count">0</strong> 个标签</span>
-        <button class="btn btn--primary btn--sm" id="tag-batch-merge">合并为...</button>
-        <button class="btn btn--danger btn--sm" id="tag-batch-delete">批量删除</button>
-        <button class="btn btn--ghost btn--sm" id="tag-batch-cancel">取消选择</button>
+        <span class="batch-bar__info"><span data-i18n="selected">已选</span> <strong id="tag-selected-count">0</strong> <span data-i18n="tagsUnit">个标签</span></span>
+        <button class="btn btn--primary btn--sm" id="tag-batch-merge" data-i18n="batchMerge">合并为...</button>
+        <button class="btn btn--danger btn--sm" id="tag-batch-delete" data-i18n="batchDelete">批量删除</button>
+        <button class="btn btn--ghost btn--sm" id="tag-batch-cancel" data-i18n="cancelSelect">取消选择</button>
       </div>
       <table class="tag-table">
         <thead>
           <tr>
             <th style="width:40px"><label class="select-all"><input type="checkbox" id="tag-select-all"></label></th>
-            <th>标签名</th>
-            <th style="width:100px">记忆数</th>
-            <th style="width:160px">操作</th>
+            <th data-i18n="tagName">标签名</th>
+            <th style="width:100px" data-i18n="memoryCount">记忆数</th>
+            <th style="width:160px" data-i18n="actions">操作</th>
           </tr>
         </thead>
         <tbody id="tag-table-body"></tbody>
       </table>
     </section>
     <section id="tab-issues" class="tab-panel">
-      <div class="page-header"><h2 class="page-title">问题跟踪</h2></div>
+      <div class="page-header"><h2 class="page-title" data-i18n="issueTracking">问题跟踪</h2></div>
       <div class="toolbar">
         <input type="date" id="issue-date" class="filter-input">
         <select id="issue-status-filter" class="filter-select">
-          <option value="">全部状态</option>
-          <option value="pending">待处理</option>
-          <option value="in_progress">进行中</option>
-          <option value="completed">已完成</option>
-          <option value="archived">已归档</option>
+          <option value="" data-i18n="allStatus">全部状态</option>
+          <option value="pending" data-i18n="status.pending">待处理</option>
+          <option value="in_progress" data-i18n="status.in_progress">进行中</option>
+          <option value="completed" data-i18n="status.completed">已完成</option>
+          <option value="archived" data-i18n="status.archived">已归档</option>
         </select>
       </div>
       <div id="issue-list" class="card-list"></div>
@@ -187,11 +189,12 @@
     </div>
     <div id="modal-content"></div>
     <div class="modal-footer">
-      <button class="btn btn--secondary modal-close">取消</button>
-      <button id="modal-save" class="btn btn--primary" style="display:none">保存</button>
+      <button class="btn btn--secondary modal-close" data-i18n="cancel">取消</button>
+      <button id="modal-save" class="btn btn--primary" style="display:none" data-i18n="save">保存</button>
     </div>
   </div>
 </div>
+<script src="/i18n.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

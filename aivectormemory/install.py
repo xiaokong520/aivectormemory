@@ -3,25 +3,27 @@ import json
 import platform
 from pathlib import Path
 
-# (IDE名, MCP配置路径, MCP格式, 是否全局, Steering路径, Steering写入方式)
+# (IDE名, MCP配置路径, MCP格式, 是否全局, Steering路径, Steering写入方式, Hooks目录)
 # steering_mode: "file"=独立文件 "append"=追加到已有文件 None=不写Steering
+# hooks_dir: lambda返回hooks目录路径, None=不支持hooks
 IDES = [
     ("Kiro",           lambda root: root / ".kiro/settings/mcp.json",  "standard", False,
-     lambda root: root / ".kiro/steering/aivectormemory.md", "file"),
+     lambda root: root / ".kiro/steering/aivectormemory.md", "file",
+     lambda root: root / ".kiro/hooks"),
     ("Cursor",         lambda root: root / ".cursor/mcp.json",         "standard", False,
-     lambda root: root / ".cursor/rules/aivectormemory.md", "file"),
+     lambda root: root / ".cursor/rules/aivectormemory.md", "file", None),
     ("Claude Code",    lambda root: root / ".mcp.json",                "standard", False,
-     lambda root: root / "CLAUDE.md", "append"),
+     lambda root: root / "CLAUDE.md", "append", None),
     ("Windsurf",       lambda root: root / ".windsurf/mcp.json",       "standard", False,
-     lambda root: root / ".windsurf/rules/aivectormemory.md", "file"),
+     lambda root: root / ".windsurf/rules/aivectormemory.md", "file", None),
     ("VSCode",         lambda root: root / ".vscode/mcp.json",         "standard", False,
-     lambda root: root / ".github/copilot-instructions.md", "append"),
+     lambda root: root / ".github/copilot-instructions.md", "append", None),
     ("Trae",           lambda root: root / ".trae/mcp.json",           "standard", False,
-     lambda root: root / ".trae/rules/aivectormemory.md", "file"),
+     lambda root: root / ".trae/rules/aivectormemory.md", "file", None),
     ("OpenCode",       lambda root: root / "opencode.json",            "opencode", False,
-     lambda root: root / "AGENTS.md", "append"),
+     lambda root: root / "AGENTS.md", "append", None),
     ("Claude Desktop", lambda _: _claude_desktop_path(),               "standard", True,
-     None, None),
+     None, None, None),
 ]
 
 RUNNERS = [
@@ -131,7 +133,141 @@ status 字段说明：
 - preferences：用户表达的技术偏好（scope 固定 user，跨项目通用）
 
 规则：每条内容必须具体可追溯，没有的分类传空数组，不要编造
+
+## 代码风格
+
+简洁优先：
+- 能用三目运算符，不用 if-else
+- 能用短路求值，不用条件判断
+- 能用解构赋值，不用逐个取值
+- 能用模板字符串，不用字符串拼接
+
+避免冗余：
+- 不写无意义的注释
+- 不写重复的代码，提取公共函数
+- 变量命名清晰，不需要注释解释
+
+## 完成标准
+
+禁止模糊表述：
+- 禁止"基本完成"、"差不多"、"大致实现"等词汇
+- 任务只有两种状态：完成 或 未完成
+
+完成确认流程：
+1. 逐项检查：对照任务清单逐一验证
+2. 代码验证：确认代码存在且正确
+3. 功能测试：编译或运行测试验证
+4. 标记完成：测试通过后才标记完成
+
+## 错误处理
+
+反复失败时：
+1. 记录已尝试的方法
+2. 换一种思路解决
+3. 仍然失败则询问用户
+
+遇到报错或异常时：
+- 禁止盲目测试，必须分析问题根本原因
+- 必须查看问题对应的代码文件
+- 修复方案必须与实际错误对应
+
+## 自检要求
+
+完成任务前必须自问：
+1. 排查是否完整？
+2. 数据是否准确？
+3. 逻辑是否严谨？
+
+禁止：
+- 禁止说"大部分"、"基本上"、"应该是"等模糊词
+- 禁止未经验证就下结论
+
+## 代码修改检查
+
+修改前：
+- 调用 `recall` 查询相关踩坑记录
+- 必须先查看该功能的现有实现
+- 涉及数据存储时，必须确认数据流向
+
+修改后：
+- 运行相关测试或编译验证
+- 确认修改不影响其他功能
 """
+
+
+HOOKS_CONFIGS = [
+    {
+        "filename": "auto-save-session.kiro.hook",
+        "content": {
+            "enabled": True,
+            "name": "会话结束自动保存",
+            "description": "每次 agent 执行结束时，自动调用 mcp_aivectormemory_auto_save 保存本次对话的决策、修改、踩坑、待办",
+            "version": "1",
+            "when": {"type": "agentStop"},
+            "then": {
+                "type": "askAgent",
+                "prompt": (
+                    "【会话结束自动保存】请立即调用 mcp_aivectormemory_auto_save，将本次对话的关键信息分类保存：\n\n"
+                    "1. decisions：本次对话做出的关键决策（技术方案选择、架构决定等）\n"
+                    "2. modifications：本次对话修改的文件和内容摘要（每个文件一条）\n"
+                    "3. pitfalls：本次对话遇到的坑和解决方案\n"
+                    "4. todos：本次对话产生的待办事项\n"
+                    "5. preferences：用户表达的技术偏好、设计风格倾向、架构选择习惯\n\n"
+                    "规则：\n"
+                    "- 每条内容必须具体、可追溯，禁止模糊描述\n"
+                    "- 没有的分类传空数组，不要编造\n"
+                    "- scope 默认 project（preferences 固定 user，跨项目通用）"
+                ),
+            },
+            "shortName": "auto-save-session",
+        },
+    },
+    {
+        "filename": "dev-workflow-check.kiro.hook",
+        "content": {
+            "enabled": True,
+            "name": "开发流程检查",
+            "description": "每次收到用户消息时，检查核心原则、问题处理原则、自测要求",
+            "version": "1",
+            "when": {"type": "promptSubmit"},
+            "then": {
+                "type": "askAgent",
+                "prompt": (
+                    "## ⚠️ 核心原则\n\n"
+                    "1. 任何操作前必须验证，不能假设，不能靠记忆\n"
+                    "2. 遇到问题禁止盲目测试，必须查看代码找到根本原因\n"
+                    "3. 禁止口头承诺，一切以测试通过为准\n"
+                    "4. 任何文件修改前必须查看代码严谨思考\n"
+                    "5. 开发、自测过程中禁止让用户手动操作\n\n"
+                    "## ⚠️ 自测要求\n\n"
+                    "禁止让用户手动操作 - 能自己执行的，不要让用户做\n\n"
+                    "- Python：python -m pytest 或直接运行脚本验证\n"
+                    "- MCP Server：通过 stdio 发送 JSON-RPC 消息验证\n"
+                    "- Web 看板：Playwright 验证\n"
+                    "- 自测通过后才能说\"等待验证\""
+                ),
+            },
+            "shortName": "dev-workflow-check",
+        },
+    },
+]
+
+
+def _write_hooks(hooks_dir: Path) -> list[str]:
+    """写入 hook 文件到指定目录，返回变更列表"""
+    results = []
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    for hook in HOOKS_CONFIGS:
+        filepath = hooks_dir / hook["filename"]
+        new_content = json.dumps(hook["content"], indent=2, ensure_ascii=False) + "\n"
+        if filepath.exists():
+            existing = filepath.read_text("utf-8")
+            if existing.strip() == new_content.strip():
+                results.append(f"- 无变更  Hook: {hook['filename']}")
+                continue
+        filepath.write_text(new_content, encoding="utf-8")
+        results.append(f"✓ 已生成  Hook: {hook['filename']}")
+    return results
 
 
 def _write_steering(filepath: Path, mode: str) -> bool:
@@ -192,7 +328,7 @@ def _merge_config(filepath: Path, key: str, server_name: str, server_config: dic
     if server_name in config[key] and config[key][server_name] == server_config:
         return False
     config[key][server_name] = server_config
-    old_key = "aivectormemory"
+    old_key = "devmemory"
     if old_key in config[key] and old_key != server_name:
         del config[key][old_key]
     filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -231,12 +367,12 @@ def run_install(project_dir: str | None = None):
     # 2. 选择 IDE
     print("支持的 IDE：")
     valid_ides = []
-    for name, path_fn, fmt, is_global, steering_fn, steering_mode in IDES:
+    for name, path_fn, fmt, is_global, steering_fn, steering_mode, hooks_fn in IDES:
         p = path_fn(Path(pdir))
         if p is None:
             continue
         tag = " (全局)" if is_global else ""
-        valid_ides.append((f"{name}{tag}", path_fn, fmt, steering_fn, steering_mode))
+        valid_ides.append((f"{name}{tag}", path_fn, fmt, steering_fn, steering_mode, hooks_fn))
 
     ide_indices = _choose("选择 IDE（编号，逗号分隔多选，a=全部）", valid_ides, allow_all=True)
     if ide_indices is None:
@@ -247,7 +383,7 @@ def run_install(project_dir: str | None = None):
     print()
     root = Path(pdir)
     for idx in ide_indices:
-        label, path_fn, fmt, steering_fn, steering_mode = valid_ides[idx]
+        label, path_fn, fmt, steering_fn, steering_mode, hooks_fn = valid_ides[idx]
         filepath = path_fn(root)
         if filepath is None:
             continue
@@ -263,5 +399,12 @@ def run_install(project_dir: str | None = None):
             s_changed = _write_steering(steering_path, steering_mode)
             s_status = "✓ 已生成" if s_changed else "- 无变更"
             print(f"  {s_status}  {label} Steering 规则 → {steering_path.relative_to(root)}")
+
+        # 5. 写入 Hooks
+        if hooks_fn:
+            hooks_dir = hooks_fn(root)
+            hook_results = _write_hooks(hooks_dir)
+            for r in hook_results:
+                print(f"  {r}")
 
     print("\n安装完成，重启 IDE 即可使用")
