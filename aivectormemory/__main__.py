@@ -1,8 +1,20 @@
 import argparse
+import io
 import sys
 
 
+def _ensure_utf8_stdio():
+    """确保 stdin/stdout 使用 UTF-8 编码（Windows pipe 默认可能是 GBK/CP936）"""
+    if sys.stdin.encoding.lower().replace("-", "") != "utf8":
+        sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
+    if sys.stdout.encoding.lower().replace("-", "") != "utf8":
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    if sys.stderr.encoding.lower().replace("-", "") != "utf8":
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
+
+
 def main():
+    _ensure_utf8_stdio()
     parser = argparse.ArgumentParser(prog="run", description="AIVectorMemory MCP Server")
     parser.add_argument("--project-dir", default=None, help="项目根目录，默认当前目录")
     sub = parser.add_subparsers(dest="command")
