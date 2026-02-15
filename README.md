@@ -205,21 +205,91 @@ run web --port 9080
 
 ## ⚡ 配合 Steering 规则
 
-AIVectorMemory 是存储层，通过 Steering 规则告诉 AI 何时调用：
+AIVectorMemory 是存储层，通过 Steering 规则告诉 AI **何时、如何**调用这些工具。
+
+运行 `run install` 会自动生成 Steering 规则和 Hooks 配置，无需手动编写。
+
+| IDE | Steering 位置 | Hooks |
+|-----|--------------|-------|
+| Kiro | `.kiro/steering/aivectormemory.md` | `.kiro/hooks/*.hook` |
+| Cursor | `.cursor/rules/aivectormemory.md` | — |
+| Claude Code | `CLAUDE.md`（追加） | — |
+| Windsurf | `.windsurf/rules/aivectormemory.md` | — |
+| VSCode | `.github/copilot-instructions.md`（追加） | — |
+| Trae | `.trae/rules/aivectormemory.md` | — |
+| OpenCode | `AGENTS.md`（追加） | — |
+
+<details>
+<summary>📋 Steering 规则范例（自动生成）</summary>
 
 ```markdown
-# 记忆管理
-- 新会话开始：调用 status 读取状态
-- 遇到踩坑：调用 remember 记录
-- 查找经验：调用 recall 搜索
-- 对话结束：调用 auto_save 保存
+# AIVectorMemory - 跨会话持久记忆
+
+## 启动检查
+
+每次新会话开始时，按以下顺序执行：
+
+1. 调用 `status`（不传参数）读取会话状态，检查 `is_blocked` 和 `block_reason`
+2. 调用 `recall`（tags: ["项目知识"], scope: "project"）加载项目知识
+3. 调用 `recall`（tags: ["preference"], scope: "user"）加载用户偏好
+
+## 何时调用
+
+- 新会话开始时：调用 `status` 读取上次的工作状态
+- 遇到踩坑/技术要点时：调用 `remember` 记录，标签加 "踩坑"
+- 需要查找历史经验时：调用 `recall` 语义搜索
+- 发现 bug 或待处理事项时：调用 `track`（action: create）
+- 任务进度变化时：调用 `status`（传 state 参数）更新
+- 对话结束前：调用 `auto_save` 保存本次对话
+
+## 会话状态管理
+
+status 字段：is_blocked, block_reason, current_task, next_step,
+progress[], recent_changes[], pending[]
+
+## 问题追踪
+
+1. `track create` → 记录问题
+2. `track update` → 更新排查内容
+3. `track archive` → 归档已解决问题
 ```
 
-| IDE | Steering 位置 |
-|-----|--------------|
-| Kiro | `.kiro/steering/*.md` |
-| Cursor | `.cursor/rules/*.md` |
-| Claude Code | `CLAUDE.md` |
+</details>
+
+<details>
+<summary>🔗 Hooks 配置范例（Kiro 专属，自动生成）</summary>
+
+会话结束自动保存（`.kiro/hooks/auto-save-session.kiro.hook`）：
+
+```json
+{
+  "enabled": true,
+  "name": "会话结束自动保存",
+  "version": "1",
+  "when": { "type": "agentStop" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "调用 auto_save，将本次对话的决策、修改、踩坑、待办分类保存"
+  }
+}
+```
+
+开发流程检查（`.kiro/hooks/dev-workflow-check.kiro.hook`）：
+
+```json
+{
+  "enabled": true,
+  "name": "开发流程检查",
+  "version": "1",
+  "when": { "type": "promptSubmit" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "核心原则：操作前验证、禁止盲目测试、自测通过才能说完成"
+  }
+}
+```
+
+</details>
 
 ## 🇨🇳 中国大陆用户
 

@@ -204,21 +204,91 @@ Visitez `http://localhost:9080` dans votre navigateur.
 
 ## ⚡ Combinaison avec les Règles Steering
 
-AIVectorMemory est la couche de stockage. Utilisez les règles Steering pour indiquer à l'IA quand appeler :
+AIVectorMemory est la couche de stockage. Utilisez les règles Steering pour indiquer à l'IA **quand et comment** appeler ces outils.
+
+L'exécution de `run install` génère automatiquement les règles Steering et la configuration des Hooks — aucune configuration manuelle nécessaire.
+
+| IDE | Emplacement Steering | Hooks |
+|-----|---------------------|-------|
+| Kiro | `.kiro/steering/aivectormemory.md` | `.kiro/hooks/*.hook` |
+| Cursor | `.cursor/rules/aivectormemory.md` | — |
+| Claude Code | `CLAUDE.md` (ajouté) | — |
+| Windsurf | `.windsurf/rules/aivectormemory.md` | — |
+| VSCode | `.github/copilot-instructions.md` (ajouté) | — |
+| Trae | `.trae/rules/aivectormemory.md` | — |
+| OpenCode | `AGENTS.md` (ajouté) | — |
+
+<details>
+<summary>📋 Exemple de Règles Steering (généré automatiquement)</summary>
 
 ```markdown
-# Gestion de la Mémoire
-- Nouvelle session : appeler status pour lire l'état
-- Erreur trouvée : appeler remember pour enregistrer
-- Chercher une expérience : appeler recall pour rechercher
-- Fin de conversation : appeler auto_save pour sauvegarder
+# AIVectorMemory - Mémoire Persistante Inter-Sessions
+
+## Vérification au Démarrage
+
+Au début de chaque nouvelle session, exécuter dans l'ordre :
+
+1. Appeler `status` (sans paramètres) pour lire l'état de la session, vérifier `is_blocked` et `block_reason`
+2. Appeler `recall` (tags: ["connaissance-projet"], scope: "project") pour charger les connaissances du projet
+3. Appeler `recall` (tags: ["preference"], scope: "user") pour charger les préférences utilisateur
+
+## Quand Appeler
+
+- Nouvelle session : appeler `status` pour lire l'état de travail précédent
+- Erreur trouvée : appeler `remember` pour enregistrer, ajouter le tag "erreur"
+- Besoin d'expérience historique : appeler `recall` pour recherche sémantique
+- Bug ou tâche trouvé : appeler `track` (action: create)
+- Changement de progression : appeler `status` (passer le paramètre state) pour mettre à jour
+- Avant la fin de la conversation : appeler `auto_save` pour sauvegarder cette session
+
+## Gestion de l'État de Session
+
+Champs status : is_blocked, block_reason, current_task, next_step,
+progress[], recent_changes[], pending[]
+
+## Suivi des Problèmes
+
+1. `track create` → Enregistrer le problème
+2. `track update` → Mettre à jour le contenu d'investigation
+3. `track archive` → Archiver les problèmes résolus
 ```
 
-| IDE | Emplacement Steering |
-|-----|---------------------|
-| Kiro | `.kiro/steering/*.md` |
-| Cursor | `.cursor/rules/*.md` |
-| Claude Code | `CLAUDE.md` |
+</details>
+
+<details>
+<summary>🔗 Exemple de Configuration Hooks (Kiro uniquement, généré automatiquement)</summary>
+
+Sauvegarde automatique en fin de session (`.kiro/hooks/auto-save-session.kiro.hook`) :
+
+```json
+{
+  "enabled": true,
+  "name": "Sauvegarde Automatique de Session",
+  "version": "1",
+  "when": { "type": "agentStop" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Appeler auto_save pour catégoriser et sauvegarder les décisions, modifications, erreurs et tâches en attente"
+  }
+}
+```
+
+Vérification du workflow de développement (`.kiro/hooks/dev-workflow-check.kiro.hook`) :
+
+```json
+{
+  "enabled": true,
+  "name": "Vérification du Workflow de Développement",
+  "version": "1",
+  "when": { "type": "promptSubmit" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Principes : vérifier avant d'agir, pas de tests à l'aveugle, ne marquer comme terminé qu'après réussite des tests"
+  }
+}
+```
+
+</details>
 
 ## 🇨🇳 Utilisateurs en Chine
 

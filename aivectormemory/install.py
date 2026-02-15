@@ -328,7 +328,7 @@ def _merge_config(filepath: Path, key: str, server_name: str, server_config: dic
     if server_name in config[key] and config[key][server_name] == server_config:
         return False
     config[key][server_name] = server_config
-    old_key = "aivectormemory"
+    old_key = "devmemory"
     if old_key in config[key] and old_key != server_name:
         del config[key][old_key]
     filepath.parent.mkdir(parents=True, exist_ok=True)

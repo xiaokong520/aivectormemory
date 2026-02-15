@@ -204,21 +204,91 @@ run web --port 9080
 
 ## ⚡ Steeringルールとの組み合わせ
 
-AIVectorMemoryはストレージ層です。Steeringルールを使ってAIにいつ呼び出すかを指示します：
+AIVectorMemoryはストレージ層です。Steeringルールを使ってAIに**いつ、どのように**ツールを呼び出すかを指示します。
+
+`run install` を実行すると、Steeringルールとフック設定が自動生成されます。手動設定は不要です。
+
+| IDE | Steeringの場所 | Hooks |
+|-----|---------------|-------|
+| Kiro | `.kiro/steering/aivectormemory.md` | `.kiro/hooks/*.hook` |
+| Cursor | `.cursor/rules/aivectormemory.md` | — |
+| Claude Code | `CLAUDE.md`（追記） | — |
+| Windsurf | `.windsurf/rules/aivectormemory.md` | — |
+| VSCode | `.github/copilot-instructions.md`（追記） | — |
+| Trae | `.trae/rules/aivectormemory.md` | — |
+| OpenCode | `AGENTS.md`（追記） | — |
+
+<details>
+<summary>📋 Steeringルール例（自動生成）</summary>
 
 ```markdown
-# 記憶管理
-- 新セッション開始：statusを呼び出して状態を読み取り
-- つまずき発見：rememberを呼び出して記録
-- 経験を検索：recallを呼び出して検索
-- 会話終了：auto_saveを呼び出して保存
+# AIVectorMemory - セッション間永続メモリ
+
+## 起動チェック
+
+新しいセッション開始時に、以下の順序で実行：
+
+1. `status`（パラメータなし）を呼び出してセッション状態を読み取り、`is_blocked` と `block_reason` を確認
+2. `recall`（tags: ["プロジェクト知識"], scope: "project"）を呼び出してプロジェクト知識を読み込み
+3. `recall`（tags: ["preference"], scope: "user"）を呼び出してユーザー設定を読み込み
+
+## いつ呼び出すか
+
+- 新セッション開始時：`status` を呼び出して前回の作業状態を読み取り
+- つまずき発見時：`remember` を呼び出して記録、タグ "つまずき" を追加
+- 過去の経験が必要な時：`recall` でセマンティック検索
+- バグやTODO発見時：`track`（action: create）を呼び出し
+- タスク進捗変更時：`status`（stateパラメータ渡し）で更新
+- 会話終了前：`auto_save` を呼び出してこのセッションを保存
+
+## セッション状態管理
+
+statusフィールド：is_blocked, block_reason, current_task, next_step,
+progress[], recent_changes[], pending[]
+
+## 問題追跡
+
+1. `track create` → 問題を記録
+2. `track update` → 調査内容を更新
+3. `track archive` → 解決済み問題をアーカイブ
 ```
 
-| IDE | Steeringの場所 |
-|-----|---------------|
-| Kiro | `.kiro/steering/*.md` |
-| Cursor | `.cursor/rules/*.md` |
-| Claude Code | `CLAUDE.md` |
+</details>
+
+<details>
+<summary>🔗 フック設定例（Kiro専用、自動生成）</summary>
+
+セッション終了時の自動保存（`.kiro/hooks/auto-save-session.kiro.hook`）：
+
+```json
+{
+  "enabled": true,
+  "name": "セッション自動保存",
+  "version": "1",
+  "when": { "type": "agentStop" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "auto_saveを呼び出して、このセッションの決定、変更、つまずき、TODOを分類して保存"
+  }
+}
+```
+
+開発ワークフローチェック（`.kiro/hooks/dev-workflow-check.kiro.hook`）：
+
+```json
+{
+  "enabled": true,
+  "name": "開発ワークフローチェック",
+  "version": "1",
+  "when": { "type": "promptSubmit" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "核心原則：行動前に検証、盲目的なテスト禁止、テスト合格後のみ完了とマーク"
+  }
+}
+```
+
+</details>
 
 ## 🇨🇳 中国本土のユーザー
 

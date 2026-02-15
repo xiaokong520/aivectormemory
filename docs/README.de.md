@@ -204,21 +204,91 @@ Besuche `http://localhost:9080` im Browser.
 
 ## ⚡ Kombination mit Steering-Regeln
 
-AIVectorMemory ist die Speicherschicht. Verwende Steering-Regeln, um der KI mitzuteilen, wann sie aufrufen soll:
+AIVectorMemory ist die Speicherschicht. Verwende Steering-Regeln, um der KI mitzuteilen, **wann und wie** sie diese Tools aufrufen soll.
+
+`run install` generiert automatisch Steering-Regeln und Hooks-Konfiguration — kein manuelles Setup nötig.
+
+| IDE | Steering-Pfad | Hooks |
+|-----|--------------|-------|
+| Kiro | `.kiro/steering/aivectormemory.md` | `.kiro/hooks/*.hook` |
+| Cursor | `.cursor/rules/aivectormemory.md` | — |
+| Claude Code | `CLAUDE.md` (angehängt) | — |
+| Windsurf | `.windsurf/rules/aivectormemory.md` | — |
+| VSCode | `.github/copilot-instructions.md` (angehängt) | — |
+| Trae | `.trae/rules/aivectormemory.md` | — |
+| OpenCode | `AGENTS.md` (angehängt) | — |
+
+<details>
+<summary>📋 Steering-Regeln Beispiel (automatisch generiert)</summary>
 
 ```markdown
-# Erinnerungsverwaltung
-- Neue Sitzung: status aufrufen um Status zu lesen
-- Fehler gefunden: remember aufrufen um zu protokollieren
-- Erfahrung suchen: recall aufrufen um zu suchen
-- Konversation beenden: auto_save aufrufen um zu speichern
+# AIVectorMemory - Sitzungsübergreifender persistenter Speicher
+
+## Startprüfung
+
+Zu Beginn jeder neuen Sitzung in dieser Reihenfolge ausführen:
+
+1. `status` aufrufen (ohne Parameter) um Sitzungsstatus zu lesen, `is_blocked` und `block_reason` prüfen
+2. `recall` aufrufen (tags: ["Projektwissen"], scope: "project") um Projektwissen zu laden
+3. `recall` aufrufen (tags: ["preference"], scope: "user") um Benutzereinstellungen zu laden
+
+## Wann aufrufen
+
+- Neue Sitzung beginnt: `status` aufrufen um vorherigen Arbeitsstatus zu lesen
+- Fehler gefunden: `remember` aufrufen um zu protokollieren, Tag "Fehler" hinzufügen
+- Historische Erfahrung benötigt: `recall` für semantische Suche aufrufen
+- Bug oder TODO gefunden: `track` (action: create) aufrufen
+- Aufgabenfortschritt ändert sich: `status` (state Parameter übergeben) zum Aktualisieren
+- Vor Konversationsende: `auto_save` aufrufen um diese Sitzung zu speichern
+
+## Sitzungsstatus-Verwaltung
+
+status-Felder: is_blocked, block_reason, current_task, next_step,
+progress[], recent_changes[], pending[]
+
+## Problemverfolgung
+
+1. `track create` → Problem erfassen
+2. `track update` → Untersuchungsinhalt aktualisieren
+3. `track archive` → Gelöste Probleme archivieren
 ```
 
-| IDE | Steering-Pfad |
-|-----|--------------|
-| Kiro | `.kiro/steering/*.md` |
-| Cursor | `.cursor/rules/*.md` |
-| Claude Code | `CLAUDE.md` |
+</details>
+
+<details>
+<summary>🔗 Hooks-Konfiguration Beispiel (nur Kiro, automatisch generiert)</summary>
+
+Automatisches Speichern bei Sitzungsende (`.kiro/hooks/auto-save-session.kiro.hook`):
+
+```json
+{
+  "enabled": true,
+  "name": "Sitzung automatisch speichern",
+  "version": "1",
+  "when": { "type": "agentStop" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "auto_save aufrufen um Entscheidungen, Änderungen, Fehler und Aufgaben dieser Sitzung kategorisiert zu speichern"
+  }
+}
+```
+
+Entwicklungsworkflow-Prüfung (`.kiro/hooks/dev-workflow-check.kiro.hook`):
+
+```json
+{
+  "enabled": true,
+  "name": "Entwicklungsworkflow-Prüfung",
+  "version": "1",
+  "when": { "type": "promptSubmit" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Kernprinzipien: Vor dem Handeln verifizieren, kein blindes Testen, erst nach bestandenen Tests als erledigt markieren"
+  }
+}
+```
+
+</details>
 
 ## 🇨🇳 Nutzer in China
 

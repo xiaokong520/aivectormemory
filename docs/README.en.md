@@ -204,21 +204,91 @@ Visit `http://localhost:9080` in your browser.
 
 ## ⚡ Pairing with Steering Rules
 
-AIVectorMemory is the storage layer. Use Steering rules to tell AI when to call it:
+AIVectorMemory is the storage layer. Use Steering rules to tell AI **when and how** to call these tools.
+
+Running `run install` auto-generates Steering rules and Hooks config — no manual setup needed.
+
+| IDE | Steering Location | Hooks |
+|-----|------------------|-------|
+| Kiro | `.kiro/steering/aivectormemory.md` | `.kiro/hooks/*.hook` |
+| Cursor | `.cursor/rules/aivectormemory.md` | — |
+| Claude Code | `CLAUDE.md` (appended) | — |
+| Windsurf | `.windsurf/rules/aivectormemory.md` | — |
+| VSCode | `.github/copilot-instructions.md` (appended) | — |
+| Trae | `.trae/rules/aivectormemory.md` | — |
+| OpenCode | `AGENTS.md` (appended) | — |
+
+<details>
+<summary>📋 Steering Rules Example (auto-generated)</summary>
 
 ```markdown
-# Memory Management
-- New session: call status to read state
-- Hit a pitfall: call remember to record
-- Looking for experience: call recall to search
-- End of conversation: call auto_save to save
+# AIVectorMemory - Cross-Session Persistent Memory
+
+## Startup Check
+
+At the start of each new session, execute in order:
+
+1. Call `status` (no params) to read session state, check `is_blocked` and `block_reason`
+2. Call `recall` (tags: ["project-knowledge"], scope: "project") to load project knowledge
+3. Call `recall` (tags: ["preference"], scope: "user") to load user preferences
+
+## When to Call
+
+- New session starts: call `status` to read previous work state
+- Hit a pitfall: call `remember` to record, add tag "pitfall"
+- Need historical experience: call `recall` for semantic search
+- Found a bug or TODO: call `track` (action: create)
+- Task progress changes: call `status` (pass state param) to update
+- Before conversation ends: call `auto_save` to save this session
+
+## Session State Management
+
+status fields: is_blocked, block_reason, current_task, next_step,
+progress[], recent_changes[], pending[]
+
+## Issue Tracking
+
+1. `track create` → Record issue
+2. `track update` → Update investigation content
+3. `track archive` → Archive resolved issues
 ```
 
-| IDE | Steering Location |
-|-----|------------------|
-| Kiro | `.kiro/steering/*.md` |
-| Cursor | `.cursor/rules/*.md` |
-| Claude Code | `CLAUDE.md` |
+</details>
+
+<details>
+<summary>🔗 Hooks Config Example (Kiro only, auto-generated)</summary>
+
+Auto-save on session end (`.kiro/hooks/auto-save-session.kiro.hook`):
+
+```json
+{
+  "enabled": true,
+  "name": "Auto-save Session",
+  "version": "1",
+  "when": { "type": "agentStop" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Call auto_save to categorize and save decisions, modifications, pitfalls, and todos from this session"
+  }
+}
+```
+
+Dev workflow check (`.kiro/hooks/dev-workflow-check.kiro.hook`):
+
+```json
+{
+  "enabled": true,
+  "name": "Dev Workflow Check",
+  "version": "1",
+  "when": { "type": "promptSubmit" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Core principles: verify before acting, no blind testing, only mark done after tests pass"
+  }
+}
+```
+
+</details>
 
 ## 🇨🇳 Users in China
 

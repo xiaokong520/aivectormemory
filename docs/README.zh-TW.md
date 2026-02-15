@@ -204,21 +204,91 @@ run web --port 9080
 
 ## ⚡ 搭配 Steering 規則
 
-AIVectorMemory 是儲存層，透過 Steering 規則告訴 AI 何時呼叫：
+AIVectorMemory 是儲存層，透過 Steering 規則告訴 AI **何時、如何**呼叫這些工具。
+
+執行 `run install` 會自動產生 Steering 規則和 Hooks 設定，無需手動編寫。
+
+| IDE | Steering 位置 | Hooks |
+|-----|--------------|-------|
+| Kiro | `.kiro/steering/aivectormemory.md` | `.kiro/hooks/*.hook` |
+| Cursor | `.cursor/rules/aivectormemory.md` | — |
+| Claude Code | `CLAUDE.md`（追加） | — |
+| Windsurf | `.windsurf/rules/aivectormemory.md` | — |
+| VSCode | `.github/copilot-instructions.md`（追加） | — |
+| Trae | `.trae/rules/aivectormemory.md` | — |
+| OpenCode | `AGENTS.md`（追加） | — |
+
+<details>
+<summary>📋 Steering 規則範例（自動產生）</summary>
 
 ```markdown
-# 記憶管理
-- 新會話開始：呼叫 status 讀取狀態
-- 遇到踩坑：呼叫 remember 記錄
-- 查找經驗：呼叫 recall 搜尋
-- 對話結束：呼叫 auto_save 儲存
+# AIVectorMemory - 跨會話持久記憶
+
+## 啟動檢查
+
+每次新會話開始時，按以下順序執行：
+
+1. 呼叫 `status`（不傳參數）讀取會話狀態，檢查 `is_blocked` 和 `block_reason`
+2. 呼叫 `recall`（tags: ["項目知識"], scope: "project"）載入項目知識
+3. 呼叫 `recall`（tags: ["preference"], scope: "user"）載入使用者偏好
+
+## 何時呼叫
+
+- 新會話開始時：呼叫 `status` 讀取上次的工作狀態
+- 遇到踩坑/技術要點時：呼叫 `remember` 記錄，標籤加 "踩坑"
+- 需要查找歷史經驗時：呼叫 `recall` 語義搜尋
+- 發現 bug 或待處理事項時：呼叫 `track`（action: create）
+- 任務進度變化時：呼叫 `status`（傳 state 參數）更新
+- 對話結束前：呼叫 `auto_save` 儲存本次對話
+
+## 會話狀態管理
+
+status 欄位：is_blocked, block_reason, current_task, next_step,
+progress[], recent_changes[], pending[]
+
+## 問題追蹤
+
+1. `track create` → 記錄問題
+2. `track update` → 更新排查內容
+3. `track archive` → 歸檔已解決問題
 ```
 
-| IDE | Steering 位置 |
-|-----|--------------|
-| Kiro | `.kiro/steering/*.md` |
-| Cursor | `.cursor/rules/*.md` |
-| Claude Code | `CLAUDE.md` |
+</details>
+
+<details>
+<summary>🔗 Hooks 設定範例（Kiro 專屬，自動產生）</summary>
+
+會話結束自動儲存（`.kiro/hooks/auto-save-session.kiro.hook`）：
+
+```json
+{
+  "enabled": true,
+  "name": "會話結束自動儲存",
+  "version": "1",
+  "when": { "type": "agentStop" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "呼叫 auto_save，將本次對話的決策、修改、踩坑、待辦分類儲存"
+  }
+}
+```
+
+開發流程檢查（`.kiro/hooks/dev-workflow-check.kiro.hook`）：
+
+```json
+{
+  "enabled": true,
+  "name": "開發流程檢查",
+  "version": "1",
+  "when": { "type": "promptSubmit" },
+  "then": {
+    "type": "askAgent",
+    "prompt": "核心原則：操作前驗證、禁止盲目測試、自測通過才能說完成"
+  }
+}
+```
+
+</details>
 
 ## 🇨🇳 中國大陸使用者
 
