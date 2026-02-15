@@ -1,3 +1,5 @@
+🌐 简体中文 | [繁體中文](docs/README.zh-TW.md) | [English](docs/README.en.md) | [Español](docs/README.es.md) | [Deutsch](docs/README.de.md) | [Français](docs/README.fr.md) | [日本語](docs/README.ja.md)
+
 <p align="center">
   <h1 align="center">🧠 AIVectorMemory</h1>
   <p align="center">
@@ -13,9 +15,9 @@
 
 ---
 
-> **问题**：AI 助手每次新会话都"失忆"，反复踩同样的坑、忘记项目约定、丢失开发进度。
+> **问题**：AI 助手每次新会话都"失忆"，反复踩同样的坑、忘记项目约定、丢失开发进度。更糟的是，为了补偿失忆，你不得不在每次对话中重复注入大量上下文，白白浪费 Token。
 >
-> **AIVectorMemory**：通过 MCP 协议为 AI 提供本地向量记忆库，让它记住一切 — 项目知识、踩坑记录、开发决策、工作进度 — 跨会话永不丢失。
+> **AIVectorMemory**：通过 MCP 协议为 AI 提供本地向量记忆库，让它记住一切 — 项目知识、踩坑记录、开发决策、工作进度 — 跨会话永不丢失。语义检索按需召回，不再全量注入，大幅降低 Token 消耗。
 
 ## ✨ 核心特性
 
@@ -25,17 +27,18 @@
 | 🏠 **完全本地** | ONNX Runtime 本地推理，无需 API Key，数据不出本机 |
 | 🔄 **智能去重** | 余弦相似度 > 0.95 自动更新，不会重复存储 |
 | 📊 **Web 看板** | 内置管理界面，3D 向量网络可视化 |
-| 🔌 **全 IDE 支持** | Cursor / Kiro / Claude Code / Windsurf / VSCode / Trae 等 |
+| 🔌 **全 IDE 支持** | OpenCode / Claude Code / Cursor / Kiro / Windsurf / VSCode / Trae 等 |
 | 📁 **项目隔离** | 多项目共用一个 DB，通过 project_dir 自动隔离 |
 | 🏷️ **标签体系** | 记忆分类管理，支持标签搜索、重命名、合并 |
-| 📋 **问题追踪** | 轻量级 issue tracker，AI 自动记录和归档 |
+| � **节省 Token** | 语义检索按需召回，替代全量上下文注入，减少 50%+ 重复 Token 消耗 |
+| �📋 **问题追踪** | 轻量级 issue tracker，AI 自动记录和归档 |
 
 ## 🏗️ 架构
 
 ```
 ┌─────────────────────────────────────────────────┐
 │                   AI IDE                         │
-│  Cursor / Kiro / Claude Code / Windsurf / ...   │
+│  OpenCode / Claude Code / Cursor / Kiro / ...   │
 └──────────────────────┬──────────────────────────┘
                        │ MCP Protocol (stdio)
 ┌──────────────────────▼──────────────────────────┐
@@ -186,6 +189,7 @@ run web --port 9080
 - 会话状态、问题跟踪
 - 标签管理（重命名、合并、批量删除）
 - 3D 向量记忆网络可视化
+- 🌐 多语言支持（简体中文 / 繁體中文 / English / Español / Deutsch / Français / 日本語）
 
 <p align="center">
   <img src="docs/dashboard-projects.png" alt="项目选择" width="100%">
